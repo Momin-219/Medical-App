@@ -250,10 +250,10 @@ public class MainForm : Form
             switch (index)
             {
                 case 0: NavigateTo(new ProfileControl(currentDoctorId)); break;
-                // --- THIS IS THE FIXED LINE ---
-                case 1: NavigateTo(new AddPatientControl()); break;
-                // -----------------------------
-                case 2: MessageBox.Show("Records functionality will be implemented later."); break;
+                case 1: NavigateTo(new AddPatientControl(currentDoctorId)); break;
+                // --- THIS IS THE UPDATED LINE ---
+                case 2: NavigateTo(new RecordsControl()); break;
+                // --------------------------------
                 case 3: NavigateTo(new DashboardHomeControl()); break;
                 case -2: SignoutButton_Click(); break;
             }

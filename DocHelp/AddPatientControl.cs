@@ -1,193 +1,219 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 
 public class AddPatientControl : UserControl
 {
-    private TableLayoutPanel formLayout;
-    private TextBox fullNameTextBox, ageTextBox, symptomsTextBox;
-    private Label resultLabel;
-    private Button diagnoseButton;
-
+    private TextBox fullNameTextBox, ageTextBox, patientIdTextBox, symptomsTextBox;
+    private Button proceedButton;
     private Dictionary<string, ComboBox> dropdowns = new Dictionary<string, ComboBox>();
+    private readonly int currentDoctorId;
 
-    public AddPatientControl()
+    public AddPatientControl(int doctorId)
     {
+        this.currentDoctorId = doctorId;
         InitializeComponent();
     }
 
     private void InitializeComponent()
     {
         this.Dock = DockStyle.Fill;
-        this.BackColor = Color.White;
+        this.BackColor = Color.FromArgb(245, 249, 252);
+        this.Font = new Font("Segoe UI", 10F);
 
-        // --- THIS IS THE ONLY CHANGE ---
-        // This line enables scrolling for the entire control.
-        this.AutoScroll = true;
-        // -------------------------------
-
-        diagnoseButton = new Button
+        var mainFlow = new FlowLayoutPanel
         {
-            Text = "Diagnose",
-            BackColor = Color.Teal,
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.TopDown,
+            AutoScroll = true,
+            WrapContents = false,
+            Padding = new Padding(30)
+        };
+
+        // --- Patient Info Section ---
+        var patientInfoBox = CreateSectionBox("Patient Information");
+        var patientInfoLayout = CreateSectionLayout();
+        AddTextField(patientInfoLayout, "Full Name:", out fullNameTextBox);
+        AddTextField(patientInfoLayout, "Patient ID (Unique):", out patientIdTextBox);
+        AddTextField(patientInfoLayout, "Age:", out ageTextBox);
+        AddMultilineField(patientInfoLayout, "Symptoms:", out symptomsTextBox);
+        patientInfoBox.Controls.Add(patientInfoLayout);
+
+        // --- Evaluation Sections ---
+        var clinicalBox = CreateSectionBox("🧠 Clinical Evaluation");
+        AddSectionFields(clinicalBox, new Dictionary<string, string[]>
+        {
+            { "Age Group", new[] { "> 19 years", "< 19 years" } },
+            { "Testes Size", new[] { "< 4 ml", "4–12 ml", "> 12 ml" } },
+            { "Epididymis", new[] { "Thin", "Normal", "Dilated" } },
+            { "Vas Deferens", new[] { "Palpable", "Not Palpable" } },
+            { "SSC", new[] { "Normal", "Absent" } }
+        });
+
+        var hormonalBox = CreateSectionBox("🧪 Hormonal Evaluation");
+        AddSectionFields(hormonalBox, new Dictionary<string, string[]>
+        {
+            { "FSH", new[] { "Low", "Normal", "High" } },
+            { "LH", new[] { "Low", "Normal", "High" } },
+            { "Testosterone", new[] { "Low", "Normal", "High" } },
+            { "Ejaculation", new[] { "Present", "Anejaculation" } },
+            { "Prolactin", new[] { "Low", "Normal", "High" } },
+            { "TSH", new[] { "Low", "Normal", "High" } }
+        });
+
+        var semenBox = CreateSectionBox("💠 Semen Analysis");
+        AddSectionFields(semenBox, new Dictionary<string, string[]>
+        {
+            { "Azoospermia", new[] { "Present", "Absent" } },
+            { "Semen pH", new[] { "> 7", "< 7" } },
+            { "Semen Volume", new[] { "> 1 ml", "< 1 ml" } },
+            { "Fructose", new[] { "Positive", "Negative" } },
+            { "Semen Color", new[] { "Normal", "Yellowish", "Red" } }
+        });
+
+        var imagingBox = CreateSectionBox("🧲 Imaging");
+        AddSectionFields(imagingBox, new Dictionary<string, string[]>
+        {
+            { "Seminal Vesicles", new[] { "Normal", "Enlarged", "Atrophied" } },
+            { "Vas/Ejaculatory Ducts", new[] { "Normal", "Dilated", "Obstructed" } }
+        });
+
+        // --- Proceed Button ---
+        proceedButton = new Button
+        {
+            Text = "Proceed to Preview",
+            BackColor = Color.FromArgb(66, 153, 225),
             ForeColor = Color.White,
             FlatStyle = FlatStyle.Flat,
-            Height = 40,
-            Width = 120,
-            Margin = new Padding(30, 20, 0, 10),
-            Anchor = AnchorStyles.Left
+            Height = 45,
+            Width = 200,
+            Font = new Font("Segoe UI", 11F, FontStyle.Bold),
+            Margin = new Padding(0, 20, 0, 0)
         };
-        diagnoseButton.FlatAppearance.BorderSize = 0;
-        diagnoseButton.Click += DiagnoseButton_Click;
+        proceedButton.FlatAppearance.BorderSize = 0;
+        proceedButton.Click += ProceedButton_Click;
+        var buttonPanel = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true };
+        buttonPanel.Controls.Add(proceedButton);
 
-        formLayout = new TableLayoutPanel
-        {
-            ColumnCount = 2,
-            RowCount = 0,
-            Dock = DockStyle.Top,
-            Padding = new Padding(30),
-            AutoSize = true
-        };
-        formLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 200F));
-        formLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+        mainFlow.Controls.Add(patientInfoBox);
+        mainFlow.Controls.Add(clinicalBox);
+        mainFlow.Controls.Add(hormonalBox);
+        mainFlow.Controls.Add(semenBox);
+        mainFlow.Controls.Add(imagingBox);
+        mainFlow.Controls.Add(buttonPanel);
 
-        AddTextField("Full Name", out fullNameTextBox);
-        AddTextField("Age", out ageTextBox);
-        AddMultilineField("Symptoms", out symptomsTextBox);
+        // --- LAYOUT FIX ---
+        var bottomSpacer = new Panel { Height = 40 };
+        mainFlow.Controls.Add(bottomSpacer);
+        // ------------------
 
-        AddSection("🧠 Clinical Evaluation", new Dictionary<string, string[]>
-                {
-                    { "Age Group", new[] { "> 19 years", "< 19 years" } },
-                    { "Testes Size", new[] { "< 4 ml", "4–12 ml", "> 12 ml" } },
-                    { "Epididymis", new[] { "Thin", "Normal", "Dilated" } },
-                    { "Vas Deferens", new[] { "Palpable", "Not Palpable" } },
-                    { "SSC", new[] { "Normal", "Absent" } }
-                });
-
-        AddSection("🧪 Hormonal Evaluation", new Dictionary<string, string[]>
-                {
-                    { "FSH", new[] { "Low", "Normal", "High" } },
-                    { "LH", new[] { "Low", "Normal", "High" } },
-                    { "Testosterone", new[] { "Low", "Normal", "High" } },
-                    { "Ejaculation", new[] { "Present", "Anejaculation" } },
-                    { "Prolactin", new[] { "Low", "Normal", "High" } },
-                    { "TSH", new[] { "Low", "Normal", "High" } }
-                });
-
-        AddSection("💠 Semen Analysis", new Dictionary<string, string[]>
-                {
-                    { "Azoospermia", new[] { "Present", "Absent" } },
-                    { "Semen pH", new[] { "> 7", "< 7" } },
-                    { "Semen Volume", new[] { "> 1 ml", "< 1 ml" } },
-                    { "Fructose", new[] { "Positive", "Negative" } },
-                    { "Semen Color", new[] { "Normal", "Yellowish", "Red" } }
-                });
-
-        AddSection("🧲 Imaging", new Dictionary<string, string[]>
-                {
-                    { "Seminal Vesicles", new[] { "Normal", "Enlarged", "Atrophied" } },
-                    { "Vas/Ejaculatory Ducts", new[] { "Normal", "Dilated", "Obstructed" } }
-                });
-
-        resultLabel = new Label
-        {
-            Text = "",
-            AutoSize = true,
-            Font = new Font("Segoe UI", 10, FontStyle.Bold),
-            ForeColor = Color.DarkGreen,
-            Margin = new Padding(30, 10, 0, 0)
-        };
-
-        var panel = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Top,
-            FlowDirection = FlowDirection.LeftToRight,
-            Padding = new Padding(30),
-            AutoSize = true
-        };
-
-        panel.Controls.Add(diagnoseButton);
-        panel.Controls.Add(resultLabel);
-
-        // The order here matters. The control added last with DockStyle.Top will be at the very top.
-        // This means the formLayout will appear first, and the panel with the button will appear after it.
-        this.Controls.Add(panel);
-        this.Controls.Add(formLayout);
+        this.Controls.Add(mainFlow);
     }
 
-    private void AddTextField(string labelText, out TextBox textBox)
+    private GroupBox CreateSectionBox(string title) => new GroupBox
     {
-        Label label = new Label { Text = labelText, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft };
-        textBox = new TextBox { Dock = DockStyle.Fill };
-        formLayout.RowCount++;
-        formLayout.Controls.Add(label, 0, formLayout.RowCount - 1); // Corrected to use RowCount-1
-        formLayout.Controls.Add(textBox, 1, formLayout.RowCount - 1);
+        Text = title,
+        Font = new Font("Segoe UI", 12F, FontStyle.Bold),
+        ForeColor = Color.FromArgb(45, 55, 72),
+        AutoSize = true,
+        MinimumSize = new Size(800, 0),
+        Padding = new Padding(20, 25, 20, 20),
+        Margin = new Padding(0, 0, 0, 15)
+    };
+
+    private TableLayoutPanel CreateSectionLayout()
+    {
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, ColumnCount = 2 };
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 220F));
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+        return layout;
     }
 
-    private void AddMultilineField(string labelText, out TextBox textBox)
+    private void AddTextField(TableLayoutPanel parent, string labelText, out TextBox textBox)
     {
-        Label label = new Label { Text = labelText, Dock = DockStyle.Fill, TextAlign = ContentAlignment.TopLeft };
-        textBox = new TextBox { Dock = DockStyle.Fill, Multiline = true, Height = 60, ScrollBars = ScrollBars.Vertical };
-        formLayout.RowCount++;
-        formLayout.Controls.Add(label, 0, formLayout.RowCount - 1); // Corrected to use RowCount-1
-        formLayout.Controls.Add(textBox, 1, formLayout.RowCount - 1);
+        var label = new Label { Text = labelText, Font = new Font(this.Font, FontStyle.Bold), Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft };
+        textBox = new TextBox { Dock = DockStyle.Fill, Font = new Font(this.Font, FontStyle.Regular), Height = 30 };
+        parent.RowCount++;
+        parent.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F));
+        parent.Controls.Add(label, 0, parent.RowCount - 1);
+        parent.Controls.Add(textBox, 1, parent.RowCount - 1);
     }
 
-    private void AddSection(string header, Dictionary<string, string[]> fields)
+    private void AddMultilineField(TableLayoutPanel parent, string labelText, out TextBox textBox)
     {
-        Label sectionHeader = new Label
-        {
-            Text = header,
-            Font = new Font("Segoe UI", 11, FontStyle.Bold),
-            ForeColor = Color.DarkSlateGray,
-            AutoSize = true,
-            Padding = new Padding(0, 10, 0, 5)
-        };
+        var label = new Label { Text = labelText, Font = new Font(this.Font, FontStyle.Bold), Dock = DockStyle.Top, TextAlign = ContentAlignment.TopLeft, Padding = new Padding(0, 5, 0, 0) };
+        textBox = new TextBox { Dock = DockStyle.Fill, Font = new Font(this.Font, FontStyle.Regular), Multiline = true, Height = 80, ScrollBars = ScrollBars.Vertical };
+        parent.RowCount++;
+        parent.RowStyles.Add(new RowStyle(SizeType.Absolute, 90F));
+        parent.Controls.Add(label, 0, parent.RowCount - 1);
+        parent.Controls.Add(textBox, 1, parent.RowCount - 1);
+    }
 
-        formLayout.RowCount++;
-        formLayout.Controls.Add(sectionHeader, 0, formLayout.RowCount - 1); // Corrected to use RowCount-1
-        formLayout.SetColumnSpan(sectionHeader, 2);
-
+    private void AddSectionFields(GroupBox parent, Dictionary<string, string[]> fields)
+    {
+        var layout = CreateSectionLayout();
         foreach (var field in fields)
         {
-            Label label = new Label { Text = field.Key, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft };
-            ComboBox comboBox = new ComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList };
+            var label = new Label { Text = field.Key, Font = new Font(this.Font, FontStyle.Bold), Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft };
+            var comboBox = new ComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font(this.Font, FontStyle.Regular), Height = 30 };
+            comboBox.Items.Add("Please select an option");
             comboBox.Items.AddRange(field.Value);
-            if (comboBox.Items.Count > 0) comboBox.SelectedIndex = 0;
-
+            comboBox.SelectedIndex = 0;
             dropdowns[field.Key] = comboBox;
 
-            formLayout.RowCount++;
-            formLayout.Controls.Add(label, 0, formLayout.RowCount - 1); // Corrected to use RowCount-1
-            formLayout.Controls.Add(comboBox, 1, formLayout.RowCount - 1);
+            layout.RowCount++;
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F));
+            layout.Controls.Add(label, 0, layout.RowCount - 1);
+            layout.Controls.Add(comboBox, 1, layout.RowCount - 1);
         }
+        parent.Controls.Add(layout);
     }
 
-    private void DiagnoseButton_Click(object sender, EventArgs e)
+    private void ProceedButton_Click(object sender, EventArgs e)
     {
-        string name = fullNameTextBox.Text;
-        string age = ageTextBox.Text;
-        string symptoms = symptomsTextBox.Text;
-
-        string azoospermia = dropdowns["Azoospermia"].SelectedItem?.ToString();
-        string fsh = dropdowns["FSH"].SelectedItem?.ToString();
-        string vas = dropdowns["Vas Deferens"].SelectedItem?.ToString();
-
-        string diagnosis = "❌ Diagnosis not conclusive.";
-
-        if (azoospermia == "Present")
+        if (string.IsNullOrWhiteSpace(fullNameTextBox.Text) || string.IsNullOrWhiteSpace(patientIdTextBox.Text))
         {
-            if (vas == "Not Palpable" && dropdowns["Fructose"].SelectedItem?.ToString() == "Negative")
-            {
-                diagnosis = "🧬 Likely Obstructive Azoospermia (Congenital absence of Vas Deferens)";
-            }
-            else if (fsh == "High" && dropdowns["Testes Size"].SelectedItem?.ToString() == "< 4 ml")
-            {
-                diagnosis = "🧬 Likely Non-Obstructive Azoospermia (Testicular Failure)";
-            }
+            MessageBox.Show("Patient Name and Patient ID are required.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
         }
 
-        resultLabel.Text = $"Result for {name}: {diagnosis}";
+        if (DatabaseHelper.PatientIdExists(patientIdTextBox.Text))
+        {
+            MessageBox.Show("This Patient ID already exists. Please enter a unique one.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+
+        if (dropdowns.Values.Any(cb => cb.SelectedIndex <= 0))
+        {
+            MessageBox.Show("Please make a valid selection for all dropdown fields.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+
+        var patientData = new PatientData
+        {
+            PatientName = fullNameTextBox.Text,
+            PatientId = patientIdTextBox.Text,
+            Age = ageTextBox.Text,
+            Symptoms = symptomsTextBox.Text
+        };
+
+        foreach (var kvp in dropdowns)
+        {
+            patientData.Selections.Add(kvp.Key, kvp.Value.SelectedItem.ToString());
+        }
+
+        using (var preview = new PreviewForm(patientData, this.currentDoctorId))
+        {
+            if (preview.ShowDialog() == DialogResult.OK)
+            {
+                fullNameTextBox.Clear();
+                patientIdTextBox.Clear();
+                ageTextBox.Clear();
+                symptomsTextBox.Clear();
+                foreach (var cb in dropdowns.Values) { cb.SelectedIndex = 0; }
+            }
+        }
     }
 }

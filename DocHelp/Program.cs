@@ -17,6 +17,7 @@ static class Program
         DatabaseHelper.InitializeDatabase();
 
         // Starts the application by showing the WelcomeForm.
+        QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
         Application.Run(new WelcomeForm());
     }
 }
