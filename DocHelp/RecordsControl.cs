@@ -17,6 +17,9 @@ public class RecordsControl : UserControl
     private Panel viewerPlaceholderPanel;
     private Panel activeCard = null;
 
+    private string selectedPdfPath;
+
+
     public RecordsControl()
     {
         InitializeComponent();
@@ -54,6 +57,72 @@ public class RecordsControl : UserControl
             SplitterDistance = 350,
             FixedPanel = FixedPanel.Panel1
         };
+
+
+        //Chat logic starts here
+        // Chatbot Panel
+        var chatbotPanel = new Panel
+        {
+            Dock = DockStyle.Bottom,
+            Height = 220,
+            Padding = new Padding(10),
+            BackColor = Color.WhiteSmoke
+        };
+
+        // Chat Display
+        var chatDisplay = new RichTextBox
+        {
+            ReadOnly = true,
+            Dock = DockStyle.Top,
+            Height = 140,
+            BackColor = Color.White,
+            BorderStyle = BorderStyle.FixedSingle
+        };
+
+        // Input
+        var chatInput = new TextBox
+        {
+            Dock = DockStyle.Bottom,
+            Height = 30,
+            Font = new Font("Segoe UI", 10F)
+        };
+
+        // Button
+        var sendButton = new Button
+        {
+            Text = "Ask",
+            Dock = DockStyle.Bottom,
+            Height = 30,
+            BackColor = Color.FromArgb(66, 153, 225),
+            ForeColor = Color.White,
+            FlatStyle = FlatStyle.Flat
+        };
+        sendButton.FlatAppearance.BorderSize = 0;
+
+        // Send Event
+        /*sendButton.Click += async (s, e) =>
+        {
+            var question = chatInput.Text.Trim();
+            if (string.IsNullOrWhiteSpace(question)) return;
+
+            chatDisplay.AppendText($"> {question}\n");
+
+            // CALL your backend here
+            string response = await AskChatbotAsync(selectedPdfPath, question);  // You'll define this function
+
+            chatDisplay.AppendText($"{response}\n\n");
+            chatInput.Clear();
+        };*/
+
+        // Add to chatbotPanel
+        chatbotPanel.Controls.Add(sendButton);
+        chatbotPanel.Controls.Add(chatInput);
+        chatbotPanel.Controls.Add(chatDisplay);
+
+        this.Controls.Add(chatbotPanel);
+
+
+
 
         var resultsContainer = new Panel { Dock = DockStyle.Fill, BackColor = Color.White };
         var resultsHeader = new Label { Text = "Diagnosis Reports", Dock = DockStyle.Top, Font = new Font("Segoe UI", 11F, FontStyle.Bold), ForeColor = Color.White, BackColor = Color.FromArgb(45, 55, 72), Padding = new Padding(10), Height = 40, TextAlign = ContentAlignment.MiddleLeft };
@@ -203,6 +272,7 @@ public class RecordsControl : UserControl
             ShowPdfViewer();
             pdfViewer.Document?.Dispose();
             pdfViewer.Document = PdfDocument.Load(filePath);
+            selectedPdfPath = filePath;
         }
         else
         {
